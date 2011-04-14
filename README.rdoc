@@ -1,4 +1,4 @@
-= ActsAsS3fy a.k.a. S3fy
+= ActsAsS3fy (aka S3fy)
 A plugin for Amazon S3 file migrating. Optimized for Formsite (http://formsite.com) -> S3 forms attachments migrating.
 
 == Installation
