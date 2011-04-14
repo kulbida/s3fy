@@ -1,0 +1,169 @@
+= ActsAsS3fy a.k.a. S3fy
+A plugin for Amazon S3 file migrating. Optimized for Formsite (http://formsite.com) -> S3 forms attachments migrating.
+
+== Installation
+This plugin tested only on Rails 2.3.X and 3.0.3, ruby 1.8.7. We have no idea will it work for your environment) 
+
+=== Dependencies!!!
+This plugin depends and based on aws/s3 gem.
+So the first you have to do is to add further line to the your app Gemfile
+  
+  gem 'aws-s3', :require => 'aws/s3'
+
+and then
+  
+  bundle install # to install new gems
+  
+=== Installing plugin for Rails 2.3.x
+  script/plugin install git@github.com:kulbida/s3fy.git
+
+=== Installing plugin for Rails 3.0.x
+  rails plugin install git@github.com:kulbida/s3fy.git
+  
+During installation rails will copy default configuration file s3fy.yml to the app config directory.
+
+=== Configuration file options
+  s3fy.yml configuration file contains options for connection to the Amazon S3 Service which are:
+  - access_key_id - is a secret Amazon Access Key ID
+  - secret_access_key - is a secret Amazon Access Key
+  - bucket - is a Amazon bucket where all files will be stored
+  - params_key - is a hash key which value will be extracted from the incoming hash. By defauld it is 'file'
+    IMPORTANT! For cases when hash could contain multiple files its keys should be appended with file number.
+    FOR EXAMPLE the hash could be something like this one
+     
+    # here key is a 'file' appended with a number for its uniqueness.
+    hash = {'file'=>'http://some1domain.com/files/some1file.jpg', 'file1'=>'http://someOTHERdomain.com/bunch_of_files/myfavoritesong.mp3', 'file2'=>'http://mydomain.com/some_path/book.pdf', and so os...}
+    
+==== Default Configuration File:
+
+  development:
+    access_key_id: KEY_ID_GOES_HERE
+    secret_access_key: KEY_GOES_HERE
+    bucket: 'my_bucket'
+    params_key: 'file'
+
+== How To Use It
+
+=== STEP 1. Model
+  
+  class Shelf < ActiveRecord::Base
+    acts_as_s3fy :s3fy_with_path => :s3fy_files_with_path, :s3fy_filenames => :filenames
+  end
+  
+  #   All you have to do is to add class method acts_as_s3fy and pass parameters which are:
+  #   s3fy_with_path - this is an attribute of the instance variable of the class Shelf 
+  #   which will contain all uploaded files WITH path (for example: http://somedomain.com/files/somefile.zip)
+  #   s3fy_filenames - this is an attribute of the instance variable of the class Shelf 
+  #   which will contain all uploaded files WITHOUT path (for example: somefile.zip)
+  
+=== STEP 2. Adding some attributes to the model
+
+====Generating migration file
+  
+===== Rails 2.3.x
+
+  script/generate migration AddS3fyAttrsToShelf
+
+===== Rails 3.0.x
+
+  rails g migration AddS3fyAttrsToShelf
+  
+===== Migration file
+
+  class AddS3fyAttrsToShelf < ActiveRecord::Migration
+    def self.up
+      add_column :shelfs, :s3fy_files_with_path, :string, :default => ''
+      add_column :shelfs, :s3fy_filenames, :string, :default => ''
+    end
+
+    def self.down
+      remove_column :shelfs, :s3fy_files_with_path
+      remove_column :shelfs, :s3fy_filenames
+    end
+  end
+  
+==== Instance methods available:
+
+- has_attachments?
+    
+    # example:
+    @book = Shelf.find(params[:id])
+    @book.has_attachments? # returns true if book has attachments
+
+- saved_files # returns an array of files with full path
+    
+    # example:
+    @book = Shelf.find(params[:id])
+    @book.saved_files[0] # returns first file
+    
+- has_multiple_files? # returns true or false
+
+    # example:
+    @book = Shelf.find(params[:id])
+    @book.has_multiple_files?
+
+- find_file('filename.ext')
+  
+    # example of downloading first file rfom the bucket:
+    @book = Shelf.find(params[:id])
+    send_data(@book.find_file(@book.saved_files[0]), :filename => File.basename(@book.saved_files[0])) 
+  
+- delete_stored_files(files_without_path)
+    # example:
+    @book = Shelf.find(params[:id])
+    files = ['some_file.ext', 'second_file.ext']
+    @book.delete_stored_files(files)
+    
+- store_files(hash_with_files)
+    # example:
+    @book = Shelf.find(params[:id])
+    # a hash_with_files may looks like this one
+    files = {'file'=>'http://some1domain.com/files/some1file.jpg', 'file1'=>'http://someOTHERdomain.com/bunch_of_files/myfavoritesong.mp3', 'file2'=>'http://mydomain.com/some_path/book.pdf'}
+    @book.store_files(files)
+    # store_files method will extract from the hash only hash values for keys with prefix 'file' followed by the number.
+    # IMPORTANT: prefix 'file' may be changed in the s3fy.yml configuration file.
+    # This method optimized for Formsite Server Postback feature.
+  
+=== STEP 3. Running migration!
+
+=== STEP 4. There is no 4th step.
+  
+== Example
+
+In the model
+
+  class Shelf < ActiveRecord::Base
+    acts_as_s3fy :s3fy_with_path => :s3fy_files_with_path, :s3fy_filenames => :filenames
+  end  
+
+In the controller
+
+  def send_file
+    @book = Shelf.find(params[:id])
+    send_data(@book.find_file(params[:file_url]), :filename => File.basename(params[:file_url]))
+  end
+	
+  def download
+    @book = Shelf.find(params[:id])
+    if @book.has_multiple_files?
+      respond_to do |format|
+        format.html
+      end
+    else
+      redirect_to send_file_somecontroller_url(:id => @book, :file_url => @book.saved_files[0])
+    end
+  end
+  
+In the view, file download.haml
+
+  %h1= "Attached files for book# #{@book.id}:"
+  - if @book.has_attachments?
+    %ul
+      - for file in @book.saved_files do
+        %li= link_to("#{File.basename(file)}", send_file_somecontroller_url(:id => @book, :file_url => file))
+  - else
+    %p No attachments were found.
+
+Now if book has 1 attachment clicking on the link will download attached file. If book has more then one attachment you will render download.haml template where you will find all attached files with links for each file for downloading.
+
+Copyright (c) 2011 Bogdan Kulbida, released under the MIT license.

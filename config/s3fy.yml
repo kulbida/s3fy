@@ -1,0 +1,5 @@
+development:
+  access_key_id: KEY_ID_GOES_HERE
+  secret_access_key: KEY_GOES_HERE
+  bucket: 'my_bucket'
+  params_key: 'file'
