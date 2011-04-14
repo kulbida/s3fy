@@ -141,12 +141,11 @@ In the controller
   # save all incoming files
   # for example the params looks like this:
   # params = {'file'=>'http://some1domain.com/files/some1file.jpg', 'file1'=>'http://someOTHERdomain.com/bunch_of_files/myfavoritesong.mp3', 'file2'=>'http://mydomain.com/some_path/book.pdf'}
-  #
-	def	migrate_files
-	  @book = shelf.find(params[:id])
-	  @book.store_files(params)
-	  render :nothing => true
-	end
+  def	migrate_files
+    @book = shelf.find(params[:id])
+    @book.store_files(params)
+    render :nothing => true
+  end
 
   def send_file
     @book = Shelf.find(params[:id])
