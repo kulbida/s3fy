@@ -175,4 +175,4 @@ In the view, file download.haml
 
 Now if book has 1 attachment clicking on the link will download attached file. If book has more then one attachment you will render download.haml template where you will find all attached files with links for each file for downloading.
 
-Copyright (c) 2011 Bogdan Kulbida, released under the MIT license.
+Copyright (c) 2011-2012 Bogdan Kulbida, released under the MIT license.
