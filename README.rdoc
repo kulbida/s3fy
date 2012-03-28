@@ -140,9 +140,9 @@ In the controller
 
   # save all incoming files
   # for example the params looks like this:
-  # params = {'file'=>'http://some1domain.com/files/some1file.jpg', 'file1'=>'http://someOTHERdomain.com/bunch_of_files/myfavoritesong.mp3', 'file2'=>'http://mydomain.com/some_path/book.pdf'}
-  def	migrate_files
-    @book = shelf.find(params[:id])
+  # params = {'id'=>some_id, 'file'=>'http://some1domain.com/files/some1file.jpg', 'file1'=>'http://someOTHERdomain.com/bunch_of_files/myfavoritesong.mp3', 'file2'=>'http://mydomain.com/some_path/book.pdf'}
+  def migrate_files
+    @book = Shelf.find(params[:id])
     @book.store_files(params)
     render :nothing => true
   end
@@ -168,7 +168,7 @@ In the view, file download.haml
   %h1= "Attached files for book# #{@book.id}:"
   - if @book.has_attachments?
     %ul
-      - for file in @book.saved_files do
+      - @book.saved_files.each do |file|
         %li= link_to("#{File.basename(file)}", send_file_somecontroller_url(:id => @book, :file_url => file))
   - else
     %p No attachments were found.
