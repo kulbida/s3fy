@@ -15,7 +15,6 @@ module S3fy
  
   module InstanceMethods
     def files_for_store(raw_params)
-      # returs formatted params with files only
       raw_params.select {|k,v| k=~/#{AWS_CONFIG[:params_key]}\d*/}.collect{|k,v| v}
     end
 
@@ -29,7 +28,6 @@ module S3fy
     end
 
     def delete_stored_files(files)
-      # files - an array of files
       files.each do |file|
         S3 { S3fyCore.delete("#{file}") }
       end
@@ -43,7 +41,7 @@ module S3fy
 
     def strored_files_to_str(stored_files_arr, base_name_only=false)
       return stored_files_arr.collect{|v| File.basename(v)+'|'}.to_s if base_name_only
-      stored_files_arr.collect{|v| v+'|'}.to_s
+      stored_files_arr.collect{|v| v+'|'}.join
     end
     
     def has_attachments?
@@ -51,7 +49,7 @@ module S3fy
     end
 
     def strored_files_to_arr
-      return read_attribute(self.s3fy_original_path.to_sym).split('|') unless read_attribute(self.s3fy_original_path.to_sym).blank?
+      return read_attribute(self.s3fy_original_path.to_sym).split('|') if read_attribute(self.s3fy_original_path.to_sym).present?
       false
     end
     
@@ -82,7 +80,7 @@ module S3fy
         :access_key_id     => "#{AWS_CONFIG[:access_key_id]}",
         :secret_access_key => "#{AWS_CONFIG[:secret_access_key]}"
       )
-      data = yield
+      data = yield if block_given?
       AWS::S3::Base.disconnect
       data
     end
