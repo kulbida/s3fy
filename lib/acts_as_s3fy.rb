@@ -5,55 +5,59 @@ module S3fy
  
   module ClassMethods
     def acts_as_s3fy(options = {})
-      cattr_accessor :s3fy_original_path 
+      cattr_accessor :s3fy_original_path
       cattr_accessor :s3fy_s3_path
       self.s3fy_s3_path = options[:s3fy_s3_path]
       self.s3fy_original_path = options[:s3fy_original_path]
-      send :include, InstanceMethods
+      send(:include, InstanceMethods)
     end
   end
  
   module InstanceMethods
-    def files_for_store(raw_params)
+    def files_for_store(raw_params=[])
       # returs formatted params with files only
-      str = raw_params.select {|k,v| k=~/#{AWS_CONFIG[:params_key]}\d*/}.collect{|k,v| v}
+      raw_params.select {|k,v| k =~ /#{AWS_CONFIG[:params_key]}\d*/}.collect{|k,v| v}
     end
 
     def has_multiple_files?(raw_params=nil)
-      if raw_params
-        return true if files_for_store(raw_params).size > 1
+      if raw_params.present?
+        files_for_store(raw_params).size > 1
       else
-        return true if strored_files_to_arr && strored_files_to_arr.size > 1
+        strored_files_to_arr && strored_files_to_arr.size > 1
       end
       false
     end
 
     def delete_stored_files(files)
-      # files - an array of files
-      for file in files do
+      files.each do |file|
         S3 { S3fyCore.delete("#{file}") }
       end
     end
 
     def upload_all_files(files)
-      for file in files do
+      files.each do |file|
         S3 { S3fyCore.store("#{File.basename(file)}", open(file)) }
       end
     end
 
     def strored_files_to_str(stored_files_arr, base_name_only=false)
-      return stored_files_arr.collect{|v| File.basename(v)+'|'}.to_s if base_name_only
-      return stored_files_arr.collect{|v| v+'|'}.to_s
+      if base_name_only
+        stored_files_arr.collect { |v| File.basename(v)+'|' }.to_s
+      else
+        stored_files_arr.collect { |v| v+'|' }.to_s
+      end
     end
     
     def has_attachments?
-      return true unless read_attribute(self.s3fy_original_path.to_sym).blank?
-      false      
+      read_attribute(self.s3fy_original_path.to_sym).present?
     end
 
     def strored_files_to_arr
-      return read_attribute(self.s3fy_original_path.to_sym).split('|') unless read_attribute(self.s3fy_original_path.to_sym).blank?
-      false
+      if arr = read_attribute(self.s3fy_original_path.to_sym)
+        arr.split('|')
+      else
+        []
+      end
     end
     
     alias :saved_files :strored_files_to_arr
@@ -77,6 +81,7 @@ module S3fy
     end
     
     private
+
     def S3
       AWS::S3::Base.establish_connection!(
         :access_key_id     => "#{AWS_CONFIG[:access_key_id]}",
