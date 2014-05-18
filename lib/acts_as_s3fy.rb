@@ -14,8 +14,8 @@ module S3fy
   end
  
   module InstanceMethods
+
     def files_for_store(raw_params=[])
-      # returs formatted params with files only
       raw_params.select {|k,v| k =~ /#{AWS_CONFIG[:params_key]}\d*/}.collect{|k,v| v}
     end
 
@@ -35,8 +35,8 @@ module S3fy
     end
 
     def upload_all_files(files)
-      files.each do |file|
-        S3 { S3fyCore.store("#{File.basename(file)}", open(file)) }
+      files.each do |firle|
+        S3 { S3fyCore.store(File.basename(file), open(file)) }
       end
     end
 
@@ -79,7 +79,7 @@ module S3fy
     def find_file(file)
       S3 { S3fyCore.value("#{File.basename(file)}") }
     end
-    
+
     private
 
     def S3
@@ -87,7 +87,7 @@ module S3fy
         :access_key_id     => "#{AWS_CONFIG[:access_key_id]}",
         :secret_access_key => "#{AWS_CONFIG[:secret_access_key]}"
       )
-      data = yield
+      data = yield if block_given?
       AWS::S3::Base.disconnect
       data
     end
